@@ -1,83 +1,61 @@
 import json
 import requests
+import csv
+from io import StringIO
 
-# Official Pre-Tournament FIFA World Rankings for all 48 qualified teams (June 2026 Update)
-TEAM_RANKINGS = {
-    "Mexico": 14, "South Korea": 25, "Czechia": 39, "South Africa": 60,
-    "Switzerland": 19, "Canada": 31, "Qatar": 55, "Bosnia and Herzegovina": 64,
-    "Brazil": 6, "Morocco": 7, "Scotland": 43, "Haiti": 82,
-    "United States": 16, "Türkiye": 22, "Australia": 27, "Paraguay": 40,
-    "Germany": 10, "Ecuador": 24, "Côte d'Ivoire": 33, "Curaçao": 83,
-    "Netherlands": 8, "Japan": 18, "Sweden": 38, "Tunisia": 46,
-    "Belgium": 9, "IR Iran": 20, "Egypt": 29, "New Zealand": 85,
-    "Spain": 2, "Uruguay": 17, "Saudi Arabia": 61, "Cabo Verde": 68,
-    "France": 3, "Senegal": 15, "Norway": 31, "Iraq": 56,
-    "Argentina": 1, "Austria": 23, "Algeria": 28, "Jordan": 63,
-    "Portugal": 5, "Colombia": 13, "Congo DR": 45, "Uzbekistan": 50,
-    "England": 4, "Croatia": 11, "Panama": 34, "Ghana": 73
-}
+# ... Keep your existing TEAM_RANKINGS, get_scaled_ranking, and fetch_live_tournament_state() exactly the same ...
 
-LOWEST_RANK = max(TEAM_RANKINGS.values()) 
+# Paste your copied spreadsheet ID here
+SPREADSHEET_ID = "1xVHTfh8G-EOJK_jTiz0zqQ2Q0t4ySVvcVNza4gPIAH0"
 
-def get_scaled_ranking(team_name):
-    rank = TEAM_RANKINGS.get(team_name, LOWEST_RANK)
-    return rank / LOWEST_RANK
-
-def fetch_live_tournament_state():
-    """Fetches real-time match data from WorldCup2026 API to track team progression & exits"""
-    state = {
-        "winner": "TBD", "runner_up": "TBD",
-        "semis": [], "quarters": [], "r16": [], "r32": [], "group_stage_exit": []
-    }
+def sync_players_from_google_sheets():
+    """Backup function that pulls the entire Google Sheet directly to heal dropped webhooks"""
+    csv_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv"
     
     try:
-        response = requests.get("https://worldcup26.ir/get/games", timeout=10)
+        response = requests.get(csv_url, timeout=15)
         if response.status_code != 200:
-            return state
-        
-        matches = response.json()
-        
-        all_teams_started = set(TEAM_RANKINGS.keys())
-        knockout_attendees = set()
-        
-        for match in matches:
-            stage = match.get("stage", "")
-            status = match.get("status", "")
-            home = match.get("home_team")
-            away = match.get("away_team")
-            winner = match.get("winner_team")
+            print("Backup sync failed: Could not read Google Sheet.")
+            return False
             
-            # Record any team that made it past the initial 12 groups into the knockouts
-            if stage in ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final"]:
-                if home: knockout_attendees.add(home)
-                if away: knockout_attendees.add(away)
+        # Parse the downloaded CSV data
+        csv_data = StringIO(response.text)
+        reader = list(csv_reader := csv.reader(csv_data))
+        
+        if len(reader) <= 1:
+            return False # Sheet is empty or only contains headers
+            
+        updated_players = []
+        # Skip header row (row 0), loop through submissions
+        for row in reader[1:]:
+            if len(row) < 6: # Ensure row isn't corrupted or empty
+                continue
                 
-            # Populate our evaluation arrays
-            if stage == "Round of 32":
-                if home: state["r32"].append(home)
-                if away: state["r32"].append(away)
-            elif stage == "Round of 16":
-                if home: state["r16"].append(home)
-                if away: state["r16"].append(away)
-            elif stage == "Quarter-finals":
-                if home: state["quarters"].append(home)
-                if away: state["quarters"].append(away)
-            elif stage == "Semi-finals":
-                if home: state["semis"].append(home)
-                if away: state["semis"].append(away)
-            elif stage == "Final" and status == "finished" and winner:
-                state["winner"] = winner
-                state["runner_up"] = away if winner == home else home
-
-        # Eliminated entirely in the primary group phase
-        state["group_stage_exit"] = list(all_teams_started - knockout_attendees)
+            # Maps your columns: Timestamp[0], Name[1], Winner[2], RunnerUp[3], Disappointment[4], Underdog[5]
+            updated_players.append({
+                "name": row[1].strip(),
+                "winners": row[2].strip(),
+                "runnersUp": row[3].strip(),
+                "disappointment": row[4].strip(),
+                "underdogs": row[5].strip(),
+                "totalScore": 0.0 # Will be populated by the scoring engine immediately next
+            })
+            
+        # Re-write the users.json file with a fresh, complete snapshot from the sheet
+        with open('data/users.json', 'w') as file:
+            json.dump(updated_players, file, indent=2)
+        print(f"🔄 Backup Sync Successful: Hard-synced {len(updated_players)} players from Google Sheets.")
+        return True
         
     except Exception as e:
-        print(f"API Fetch failed: {e}")
-        
-    return state
+        print(f"Backup sync encountered an error: {e}")
+        return False
 
 def calculate_sweepstake_scores():
+    # 1. RUN THE SELF-HEALING BACKUP FIRST
+    # This automatically pulls down any player missed by the live webhook!
+    sync_players_from_google_sheets()
+
     try:
         with open('data/users.json', 'r') as file:
             players = json.load(file)
@@ -85,6 +63,7 @@ def calculate_sweepstake_scores():
         print("No users found to parse.")
         return
 
+    # 2. RUN YOUR SCORING CALCULATIONS NEXT
     live = fetch_live_tournament_state()
 
     actual_winner = live["winner"]
@@ -118,22 +97,20 @@ def calculate_sweepstake_scores():
         elif r_guess in actual_r16: score += 1
         elif r_guess in actual_r32: score += 0.5
 
-        # --- CATEGORY 3: Biggest Disappointment (Weighed by Scaled Ranking) ---
+        # --- CATEGORY 3: Biggest Disappointment ---
         d_guess = player.get('disappointment')
         d_sr = get_scaled_ranking(d_guess)
-        
         if d_guess in actual_group_stage_exit: score += 6 * d_sr
-        elif d_guess in actual_r32 and d_guess not in actual_r16: score += 5 * d_sr     # Lost in Round of 32
-        elif d_guess in actual_r16 and d_guess not in actual_quarters: score += 4 * d_sr # Lost in Round of 16
+        elif d_guess in actual_r32 and d_guess not in actual_r16: score += 5 * d_sr
+        elif d_guess in actual_r16 and d_guess not in actual_quarters: score += 4 * d_sr
         elif d_guess in actual_quarters and d_guess not in actual_semis: score += 3 * d_sr
         elif d_guess in actual_semis and d_guess != actual_runner_up and d_guess != actual_winner: score += 2 * d_sr
         elif d_guess == actual_runner_up and actual_runner_up != "TBD": score += 1 * d_sr
 
-        # --- CATEGORY 4: Underdogs (Weighed by Inverted Scaled Ranking) ---
+        # --- CATEGORY 4: Underdogs ---
         u_guess = player.get('underdogs')
         u_sr = get_scaled_ranking(u_guess)
         u_multiplier = (1 - u_sr)
-        
         if u_guess == actual_winner and actual_winner != "TBD": score += 6 * u_multiplier
         elif u_guess == actual_runner_up and actual_runner_up != "TBD": score += 4 * u_multiplier
         elif u_guess in actual_semis: score += 3 * u_multiplier
@@ -155,7 +132,7 @@ def calculate_sweepstake_scores():
     with open('data/users.json', 'w') as file:
         json.dump(leaderboard, file, indent=2)
         
-    print(f"Calculated 48-team matrix loop successfully.")
+    print(f"Calculated 48-team matrix loop successfully for {len(leaderboard)} users.")
 
 if __name__ == "__main__":
     calculate_sweepstake_scores()
