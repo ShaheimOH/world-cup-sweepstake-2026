@@ -3,124 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FIFA World Cup 2026 Sweepstake</title>
+    <title>FIFA World Cup 2026 Prediction Sweepstake</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
+<body class="bg-gray-950 text-gray-100 min-h-screen font-sans">
 
-    <header class="bg-gradient-to-r from-blue-700 via-purple-700 to-red-600 py-10 text-center shadow-xl">
-        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-md">
+    <header class="bg-gradient-to-r from-indigo-900 via-purple-900 to-rose-900 py-12 text-center shadow-2xl border-b border-purple-800/30">
+        <h1 class="text-4xl md:text-6xl font-black tracking-tight text-white drop-shadow-lg">
             WORLD CUP 2026
         </h1>
-        <p class="text-xl md:text-2xl mt-2 font-medium text-gray-200">
-            🏆 Sweepstake Tracker 🏆
+        <p class="text-xl md:text-2xl mt-2 font-bold text-amber-400 tracking-wide uppercase">
+            🔮 Prediction Sweepstake 🔮
         </p>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-10">
-        <section class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md text-center">
-                <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Total Teams</p>
-                <p class="text-4xl font-bold text-blue-400 mt-1">48</p>
+        <section class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+            <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 text-center shadow-lg">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Matches</p>
+                <p class="text-4xl font-extrabold text-indigo-400 mt-1">104</p>
             </div>
-            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md text-center">
-                <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Groups</p>
-                <p class="text-4xl font-bold text-purple-400 mt-1">12</p>
-            </div>
-            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md text-center">
-                <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Players Registered</p>
-                <p id="player-count" class="text-4xl font-bold text-emerald-400 mt-1">0</p>
+            <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 text-center shadow-lg">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pundits Submitted</p>
+                <p id="player-count" class="text-4xl font-extrabold text-amber-400 mt-1">0</p>
             </div>
         </section>
 
-        <h2 class="text-2xl font-bold mb-6 border-b border-gray-700 pb-2 flex items-center gap-2">
-            📊 Group Stage Brackets
-        </h2>
-        
-        <div id="groups-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div class="text-center py-10 col-span-full">
-                <p class="text-gray-400 animate-pulse">Loading tournament metrics...</p>
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-800 bg-gray-900/50 flex justify-between items-center">
+                <h2 class="text-xl font-black text-gray-100 flex items-center gap-2">
+                    📋 Leaderboard & Predictions
+                </h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-950 text-gray-400 uppercase text-xs font-black tracking-wider border-b border-gray-800">
+                            <th class="px-6 py-4">Player</th>
+                            <th class="px-6 py-4 text-amber-400">⭐ Total Points</th>
+                            <th class="px-6 py-4 text-emerald-400">🏆 Winners</th>
+                            <th class="px-6 py-4 text-blue-400">🥈 Runners-Up</th>
+                            <th class="px-6 py-4 text-rose-400">📉 Disappointment</th>
+                            <th class="px-6 py-4 text-amber-400">🚀 Underdogs</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictions-tbody" class="divide-y divide-gray-800/60">
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500 animate-pulse font-medium">
+                                Waiting for submissions from the tactical board...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>
 
     <script>
-        async function initDashboard() {
+        async function fetchPredictions() {
             try {
-                // Fetch our structural setup data asynchronously
-                const [teamsRes, usersRes] = await Promise.all([
-                    fetch('./data/teams.json'),
-                    fetch('./data/users.json')
-                ]);
-
-                const teamsData = await teamsRes.json();
-                const usersData = await usersRes.json();
-
-                // Map assigned users to their drafted teams for O(1) rendering checks
-                const teamToUserMap = {};
-                usersData.forEach(entry => {
-                    teamToUserMap[entry.team] = entry.name;
-                });
-
-                // Update structural player counts
+                // Fetch the dynamic user list generated by Google Sheets
+                const response = await fetch('./data/users.json');
+                const usersData = await response.json();
+                
                 document.getElementById('player-count').textContent = usersData.length;
+                const tbody = document.getElementById('predictions-tbody');
+                
+                if(usersData.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500 font-medium">
+                                No submissions yet. Share your Google Form link to start the sweepstake!
+                            </td>
+                        </tr>`;
+                    return;
+                }
 
-                const groupsGrid = document.getElementById('groups-grid');
-                groupsGrid.innerHTML = ''; // Wipe loading placeholder
+                tbody.innerHTML = ''; // Wipe loading row
 
-                // Iterate through the 12 groups (A through L)
-                Object.keys(teamsData).forEach(groupName => {
-                    const groupContainer = document.createElement('div');
-                    groupContainer.className = 'bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden transition transform hover:-translate-y-1 hover:shadow-2xl duration-200';
-
-                    // Group Header Banner
-                    const groupHeader = document.createElement('div');
-                    groupHeader.className = 'bg-gray-700 px-5 py-3 border-b border-gray-600 font-bold text-lg text-gray-200 tracking-wide';
-                    groupHeader.textContent = groupName;
-                    groupContainer.appendChild(groupHeader);
-
-                    // Team Roster Rows Table
-                    const teamList = document.createElement('ul');
-                    teamList.className = 'divide-y divide-gray-700';
-
-                    teamsData[groupName].forEach(team => {
-                        const assignedUser = teamToUserMap[team] || '⚠️ Unassigned';
-                        const isAssigned = teamToUserMap[team];
-
-                        const item = document.createElement('li');
-                        item.className = 'px-5 py-4 flex items-center justify-between text-sm hover:bg-gray-750 transition';
-                        
-                        item.innerHTML = `
-                            <div class="flex items-center gap-3">
-                                <span class="font-semibold text-gray-100">${team}</span>
-                            </div>
-                            <span class="px-3 py-1 rounded-full text-xs font-bold ${
-                                isAssigned 
-                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' 
-                                : 'bg-gray-900 text-gray-500 border border-gray-800'
-                            }">
-                                ${assignedUser}
-                            </span>
-                        `;
-                        teamList.appendChild(item);
-                    });
-
-                    groupContainer.appendChild(teamList);
-                    groupsGrid.appendChild(groupContainer);
+                usersData.forEach(player => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-gray-850/40 transition duration-150";
+                    row.innerHTML = `
+                        <td class="px-6 py-4 font-black text-gray-200">${player.name}</td>
+                        <td class="px-6 py-4 font-extrabold text-xl text-amber-400">${player.totalScore || 0} pts</td>
+                        <td class="px-6 py-4"><span class="bg-emerald-950/80 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-xl text-sm font-semibold">${player.winners}</span></td>
+                        <td class="px-6 py-4"><span class="bg-blue-950/80 text-blue-400 border border-blue-900/50 px-3 py-1.5 rounded-xl text-sm font-semibold">${player.runnersUp}</span></td>
+                        <td class="px-6 py-4"><span class="bg-rose-950/80 text-rose-400 border border-rose-900/50 px-3 py-1.5 rounded-xl text-sm font-semibold">${player.disappointment}</span></td>
+                        <td class="px-6 py-4"><span class="bg-amber-950/80 text-amber-400 border border-amber-900/50 px-3 py-1.5 rounded-xl text-sm font-semibold">${player.underdogs}</span></td>
+                    `;
+                    tbody.appendChild(row);
                 });
 
             } catch (error) {
-                console.error("Dashboard engine rendering failure:", error);
-                document.getElementById('groups-grid').innerHTML = `
-                    <div class="text-center py-10 col-span-full text-red-400 font-medium">
-                        ❌ Failed to process data feeds. Ensure local JSON configurations are valid.
-                    </div>
-                `;
+                console.error("Failed to load dashboard metrics:", error);
             }
         }
-
-        // Initialize display execution on document load
-        document.addEventListener('DOMContentLoaded', initDashboard);
+        document.addEventListener('DOMContentLoaded', fetchPredictions);
     </script>
 </body>
 </html>
