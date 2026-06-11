@@ -2,6 +2,7 @@
 
 An automated, serverless prediction tracking leaderboard for the expanded 48-team **FIFA World Cup 2026**. This project connects a public prediction form directly to a dynamic, self-sorting web dashboard with zero server maintenance costs, utilizing **Google Forms**, **Google Apps Script**, **GitHub Actions**, and a **Python Matrix Scoring Engine**.
 
+DO NOT SUBMITT MORE THAN ONCE, IT TAKES A WHILE FOR WEBPAGE TO UPDATE
 ---
 
 ## 🏆 Current Leaderboard & Player Submissions
