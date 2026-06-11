@@ -1,0 +1,14 @@
+{
+  "Group A": ["Mexico", "South Korea", "South Africa", "Czechia"],
+  "Group B": ["Canada", "Bosnia and Herzegovina", "Qatar", "Switzerland"],
+  "Group C": ["Brazil", "Morocco", "Haiti", "Scotland"],
+  "Group D": ["United States", "Paraguay", "Australia", "Türkiye"],
+  "Group E": ["Germany", "Côte d'Ivoire", "Ecuador", "Curaçao"],
+  "Group F": ["Netherlands", "Japan", "Sweden", "Tunisia"],
+  "Group G": ["Belgium", "Egypt", "IR Iran", "New Zealand"],
+  "Group H": ["Spain", "Uruguay", "Saudi Arabia", "Cabo Verde"],
+  "Group I": ["France", "Senegal", "Norway", "Iraq"],
+  "Group J": ["Argentina", "Algeria", "Austria", "Jordan"],
+  "Group K": ["Portugal", "Colombia", "Uzbekistan", "Congo DR"],
+  "Group L": ["England", "Croatia", "Ghana", "Panama"]
+}

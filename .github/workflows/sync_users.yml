@@ -1,0 +1,24 @@
+name: Sync Google Form Entries
+
+on:
+  repository_dispatch:
+    types: [form_submission]
+
+jobs:
+  update-users:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Overwrite users data store
+        run: |
+          echo '${{ github.event.client_payload.users_data }}' > data/users.json
+
+      - name: Commit data change back to repository
+        run: |
+          git config --global user.name 'Sweepstake Data Engine'
+          git config --global user.email 'engine@github.com'
+          git add data/users.json
+          git commit -m "Automated Sync: New sweepstake player registered" || echo "No changes to sync"
+          git push
