@@ -7,6 +7,8 @@ on:
 jobs:
   update-users:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Explicitly forces write access for this job
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
