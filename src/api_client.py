@@ -27,12 +27,7 @@ def get_scaled_ranking(team_name):
     return rank / LOWEST_RANK
 
 def build_team_id_maps():
-    """
-    Queries /get/teams to assemble an translation engine between IDs and standardized names.
-    Returns:
-       - name_to_id: dictionary mapping lowercased names/synonyms -> database team ID
-       - id_to_standard_name: dictionary mapping database team ID -> matching TEAM_RANKINGS key
-    """
+    """Queries /get/teams to match direct API keys against standardized naming models"""
     name_to_id = {}
     id_to_standard_name = {}
     
@@ -47,20 +42,21 @@ def build_team_id_maps():
         if response.status_code == 200:
             teams_list = response.json()
             for team in teams_list:
-                # Extract identifiers based on API schema (handles numerical id or string _id)
-                team_id = str(team.get("id") or team.get("_id", ""))
-                api_name = team.get("name", "").strip()
-                if not team_id or not api_name:
+                if not isinstance(team, dict): 
                     continue
                 
-                # Match API name against our official TEAM_RANKINGS dictionary keys
+                # Dynamic check for string MongoDB hash keys vs numerical team index strings
+                team_id = str(team.get("id") or team.get("team_id") or team.get("_id", ""))
+                api_name = team.get("name", "").strip()
+                if not team_id or not api_name: 
+                    continue
+                
                 matched_key = None
                 for official_key in TEAM_RANKINGS.keys():
                     if official_key.lower() == api_name.lower():
                         matched_key = official_key
                         break
                 
-                # Default to title-case if not explicit in dictionary
                 if not matched_key:
                     matched_key = api_name.title()
                 
@@ -68,18 +64,17 @@ def build_team_id_maps():
                 name_to_id[matched_key.lower()] = team_id
                 name_to_id[api_name.lower()] = team_id
             
-            # Layer user slang/abbreviation configurations into mapper
             for slang, official_target in synonyms.items():
                 if official_target in name_to_id:
                     name_to_id[slang] = name_to_id[official_target]
                     
     except Exception as e:
-        print(f"⚠️ Critical: Could not map master Team IDs from API directory: {e}")
+        print(f"⚠️ Critical Error parsing team directory mappings: {e}")
         
     return name_to_id, id_to_standard_name
 
 def fetch_live_tournament_state():
-    """Assembles all active phase collections entirely using unique Team IDs"""
+    """Assembles active standings entirely using direct text key comparisons"""
     state = {
         "winner": "TBD", "runner_up": "TBD",
         "semis": set(), "quarters": set(), "r16": set(), "r32": set(), "group_stage_exit": set()
@@ -89,7 +84,7 @@ def fetch_live_tournament_state():
     projected_exits = set()
     all_api_ids = set()
     
-    # 1. Gather Group Projections by internal IDs
+    # 1. Gather Group Projections
     try:
         group_response = requests.get("https://worldcup26.ir/get/groups", timeout=10)
         if group_response.status_code == 200:
@@ -97,8 +92,13 @@ def fetch_live_tournament_state():
             for group in groups_data:
                 teams = group.get("teams", [])
                 for i, team in enumerate(teams):
-                    t_id = str(team.get("id") or team.get("_id", ""))
-                    if not t_id:
+                    # Check if the team element is an object dictionary or a direct raw string ID
+                    if isinstance(team, dict):
+                        t_id = str(team.get("id") or team.get("team_id") or team.get("_id", ""))
+                    else:
+                        t_id = str(team)
+                        
+                    if not t_id: 
                         continue
                     all_api_ids.add(t_id)
                     if i < 2:
@@ -106,9 +106,9 @@ def fetch_live_tournament_state():
                     else:
                         projected_exits.add(t_id)
     except Exception as e:
-        print(f"Group projections skipped: {e}")
+        print(f"Group standings fetch skipped: {e}")
 
-    # 2. Extract Stage Updates using exact match models
+    # 2. Extract Match Stage updates safely bypassing attribute checks
     try:
         response = requests.get("https://worldcup26.ir/get/games", timeout=10)
         if response.status_code != 200:
@@ -121,18 +121,19 @@ def fetch_live_tournament_state():
         has_actual_knockouts = False
         
         for match in matches:
+            if not isinstance(match, dict): 
+                continue
             stage = match.get("stage", "")
             status = match.get("status", "")
             
-            # Resolve IDs dynamically from home/away schema references
-            # Handles embedded object references vs straight string values safely
-            home_obj = match.get("home_team")
-            away_obj = match.get("away_team")
-            winner_obj = match.get("winner_team")
+            # Safe parsing logic: extracts raw ID value directly if the endpoint passed plain strings
+            h_data = match.get("home_team")
+            a_data = match.get("away_team")
+            w_data = match.get("winner_team")
             
-            home_id = str(home_obj.get("id") or home_obj.get("_id") if isinstance(home_obj, dict) else home_obj or "")
-            away_id = str(away_obj.get("id") or away_obj.get("_id") if isinstance(away_obj, dict) else away_obj or "")
-            winner_id = str(winner_obj.get("id") or winner_obj.get("_id") if isinstance(winner_obj, dict) else winner_obj or "")
+            home_id = str(h_data.get("id") or h_data.get("_id") if isinstance(h_data, dict) else h_data or "")
+            away_id = str(a_data.get("id") or a_data.get("_id") if isinstance(a_data, dict) else a_data or "")
+            winner_id = str(w_data.get("id") or w_data.get("_id") if isinstance(w_data, dict) else w_data or "")
             
             if stage in ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final"]:
                 has_actual_knockouts = True
@@ -162,7 +163,7 @@ def fetch_live_tournament_state():
             state["group_stage_exit"] = projected_exits
             
     except Exception as e:
-        print(f"API Match processing failure: {e}")
+        print(f"API Match calculation matrix bypassed: {e}")
         state["r32"] = projected_r32
         state["group_stage_exit"] = projected_exits
         
@@ -208,7 +209,6 @@ def sync_players_from_google_sheets():
         return False
 
 def calculate_sweepstake_scores():
-    # 1. Sync submissions from Sheet
     sync_players_from_google_sheets()
     
     try:
@@ -218,7 +218,6 @@ def calculate_sweepstake_scores():
         print("No users found to parse.")
         return
 
-    # 2. Build Translation Maps & Query Live Database IDs
     name_to_id, id_to_name = build_team_id_maps()
     live = fetch_live_tournament_state()
 
@@ -236,13 +235,11 @@ def calculate_sweepstake_scores():
     for player in players:
         score = 0.0
         
-        # Translate user text entries to their corresponding database IDs
         w_id = name_to_id.get(player.get('winners', '').strip().lower(), "UNKNOWN_ID")
         r_id = name_to_id.get(player.get('runnersUp', '').strip().lower(), "UNKNOWN_ID")
         d_id = name_to_id.get(player.get('disappointment', '').strip().lower(), "UNKNOWN_ID")
         u_id = name_to_id.get(player.get('underdogs', '').strip().lower(), "UNKNOWN_ID")
 
-        # Resolve standardized names to extract pre-tournament weight metrics
         d_standard_name = id_to_name.get(d_id, "Unknown")
         u_standard_name = id_to_name.get(u_id, "Unknown")
 
@@ -291,13 +288,12 @@ def calculate_sweepstake_scores():
             "totalScore": round(score, 2)
         })
 
-    # Sort leaderboard globally by descending score values
     leaderboard = sorted(leaderboard, key=lambda x: x.get('totalScore', 0), reverse=True)
 
     with open('data/users.json', 'w') as file:
         json.dump(leaderboard, file, indent=2)
         
-    print(f"🚀 ID-Driven Calculation Loop Successful! Processed {len(leaderboard)} users perfectly.")
+    print(f"🚀 Fixed ID Engine Sync Successful! Processed {len(leaderboard)} users smoothly.")
 
 if __name__ == "__main__":
     calculate_sweepstake_scores()
