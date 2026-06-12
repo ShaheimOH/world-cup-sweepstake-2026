@@ -4,7 +4,7 @@ import requests
 import csv
 from io import StringIO
 
-# 🔑 SECURE: Looks for the GitHub Secret token first, falls back to a placeholder for local testing
+# 🔑 SECURE: Looks for the GitHub Secret token first, falls back to your token for local testing
 API_TOKEN = os.environ.get("FOOTBALL_DATA_TOKEN", "df1cb358fc2a451986970e91883e58b1")
 
 # Official Pre-Tournament FIFA World Rankings (June 2026 Update)
@@ -27,6 +27,22 @@ LOWEST_RANK = max(TEAM_RANKINGS.values())
 SPREADSHEET_ID = "1xVHTfh8G-EOJK_jTiz0zqQ2Q0t4ySVvcVNza4gPIAH0"
 HEADERS = { "X-Auth-Token": API_TOKEN }
 
+def clean_string(text):
+    """Normalizes names to minimize string mismatch issues across external sheets."""
+    if not text:
+        return ""
+    text = str(text).strip().lower()
+    # Handle common diacritics / synonyms manually for robust pairing
+    replacements = {
+        "ô": "o", "é": "e", "ü": "u", "í": "i", "ç": "c",
+        "usa": "united states", "us": "united states",
+        "korea": "south korea", "ivory coast": "côte d'ivoire",
+        "cote d'ivoire": "côte d'ivoire", "bosnia": "bosnia and herzegovina"
+    }
+    for orig, rep in replacements.items():
+        text = text.replace(orig, rep)
+    return text.strip()
+
 def get_scaled_ranking(team_name):
     rank = TEAM_RANKINGS.get(team_name, LOWEST_RANK)
     return rank / LOWEST_RANK
@@ -34,17 +50,11 @@ def get_scaled_ranking(team_name):
 def log_rate_limits(response):
     available = response.headers.get("X-RequestsAvailable", "Unknown")
     reset_timer = response.headers.get("X-RequestCounter-Reset", "Unknown")
-    print(f"Rate Limits -> Requests Available in Window: {available} | Window Reset: {reset_timer}s")
+    print(f"📊 Rate Limits -> Requests Available in Window: {available} | Window Reset: {reset_timer}s")
 
 def build_team_id_maps():
     name_to_id = {}
     id_to_standard_name = {}
-    
-    synonyms = {
-        "usa": "united states", "us": "united states",
-        "korea": "south korea", "ivory coast": "côte d'ivoire",
-        "cote d'ivoire": "côte d'ivoire", "bosnia": "bosnia and herzegovina"
-    }
     
     url = "https://api.football-data.org/v4/competitions/WC/teams"
     try:
@@ -58,25 +68,26 @@ def build_team_id_maps():
                 api_name = team.get("name", "").strip()
                 short_name = team.get("shortName", api_name).strip()
                 
-                if not team_id: continue
+                if not team_id: 
+                    continue
                 
                 matched_key = None
                 for official_key in TEAM_RANKINGS.keys():
-                    if official_key.lower() in [api_name.lower(), short_name.lower()]:
+                    if clean_string(official_key) in [clean_string(api_name), clean_string(short_name)]:
                         matched_key = official_key
                         break
                 
-                if not matched_key: matched_key = short_name.title()
+                if not matched_key: 
+                    matched_key = short_name.title()
                 
                 id_to_standard_name[team_id] = matched_key
-                name_to_id[api_name.lower()] = team_id
-                name_to_id[short_name.lower()] = team_id
-                name_to_id[matched_key.lower()] = team_id
+                name_to_id[clean_string(api_name)] = team_id
+                name_to_id[clean_string(short_name)] = team_id
+                name_to_id[clean_string(matched_key)] = team_id
+        else:
+            print(f"⚠️ Teams API Warning: Server responded with status code {response.status_code}")
     except Exception as e:
         print(f"Error building database translation maps: {e}")
-        
-    for slang, target in synonyms.items():
-        if target in name_to_id: name_to_id[slang] = name_to_id[target]
             
     return name_to_id, id_to_standard_name
 
@@ -99,9 +110,13 @@ def fetch_live_tournament_state(id_to_name):
                 table = group_block.get("table", [])
                 for idx, row in enumerate(table):
                     t_id = str(row.get("team", {}).get("id", ""))
-                    if not t_id: continue
-                    if idx < 2: interim_r32.add(t_id)
-                    else: interim_exits.add(t_id)
+                    if not t_id: 
+                        continue
+                    # 🎯 INTERIM MODE: Pulls indices 0 and 1 directly without waiting for games to finish
+                    if idx < 2: 
+                        interim_r32.add(t_id)
+                    else: 
+                        interim_exits.add(t_id)
     except Exception as e:
         print(f"Could not parse group standby tables: {e}")
 
@@ -124,7 +139,8 @@ def fetch_live_tournament_state(id_to_name):
                     if winner_assignment == "HOME_TEAM": true_winner_id = home_id
                     elif winner_assignment == "AWAY_TEAM": true_winner_id = away_id
                 
-                if stage != "GROUP_STAGE": has_actual_knockouts = True
+                if stage != "GROUP_STAGE": 
+                    has_actual_knockouts = True
                     
                 if stage == "ROUND_OF_32":
                     if home_id: state["r32"].add(home_id)
@@ -160,10 +176,12 @@ def sync_players_from_google_sheets():
     csv_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/export?format=csv"
     try:
         response = requests.get(csv_url, timeout=15)
-        if response.status_code != 200: return None
+        if response.status_code != 200: 
+            return None
         csv_data = StringIO(response.text)
         reader = list(csv.reader(csv_data))
-        if len(reader) <= 1: return None
+        if len(reader) <= 1: 
+            return None
         
         fresh_players = []
         headers = [h.strip().lower() for h in reader[0]]
@@ -177,10 +195,13 @@ def sync_players_from_google_sheets():
             elif "underdog" in h: underdog_idx = i
 
         for row in reader[1:]:
-            if not row or all(cell.strip() == "" for cell in row): continue
-            while len(row) < len(headers): row.append("")
+            if not row or all(cell.strip() == "" for cell in row): 
+                continue
+            while len(row) < len(headers): 
+                row.append("")
             player_name = row[name_idx].strip()
-            if not player_name: continue
+            if not player_name: 
+                continue
 
             fresh_players.append({
                 "name": player_name,
@@ -202,7 +223,8 @@ def calculate_sweepstake_scores():
     try:
         with open('data/raw_submissions.json', 'r') as file:
             webhook_players = json.load(file)
-            if not isinstance(webhook_players, list): webhook_players = [webhook_players]
+            if not isinstance(webhook_players, list): 
+                webhook_players = [webhook_players]
     except:
         pass
 
@@ -217,14 +239,14 @@ def calculate_sweepstake_scores():
             unique_players.append(p)
 
     if not unique_players:
-        print("No data targets logged.")
+        print("⚠️ No user targets discovered.")
         return
 
     try:
         name_to_id, id_to_name = build_team_id_maps()
         live = fetch_live_tournament_state(id_to_name)
     except Exception as e:
-        print(f"API connection failed: {e}. Calculations halted.")
+        print(f"❌ API connection failed: {e}. Calculations halted.")
         return
 
     actual_winner_id = live["winner"]
@@ -239,10 +261,14 @@ def calculate_sweepstake_scores():
 
     for player in unique_players:
         score = 0.0
-        w_id = name_to_id.get(player.get('winners', '').strip().lower(), "UNKNOWN_ID")
-        r_id = name_to_id.get(player.get('runnersUp', '').strip().lower(), "UNKNOWN_ID")
-        d_id = name_to_id.get(player.get('disappointment', '').strip().lower(), "UNKNOWN_ID")
-        u_id = name_to_id.get(player.get('underdogs', '').strip().lower(), "UNKNOWN_ID")
+        w_id = name_to_id.get(clean_string(player.get('winners')), "UNKNOWN_ID")
+        r_id = name_to_id.get(clean_string(player.get('runnersUp')), "UNKNOWN_ID")
+        d_id = name_to_id.get(clean_string(player.get('disappointment')), "UNKNOWN_ID")
+        u_id = name_to_id.get(clean_string(player.get('underdogs')), "UNKNOWN_ID")
+
+        # Fallback tracking printouts for debugging naming mismatches
+        if d_id == "UNKNOWN_ID" and player.get('disappointment'):
+            print(f"🔍 Notice: Unable to resolve ID for pick string: '{player.get('disappointment')}'")
 
         d_standard_name = id_to_name.get(d_id, "Unknown")
         u_standard_name = id_to_name.get(u_id, "Unknown")
@@ -297,7 +323,7 @@ def calculate_sweepstake_scores():
     with open('data/users.json', 'w') as file: 
         json.dump(leaderboard, file, indent=2)
         
-    print(f"Execution success! Processed {len(leaderboard)} sorted users.")
+    print(f"🚀 Success! Processed and recorded {len(leaderboard)} sorted users.")
 
 if __name__ == "__main__":
     calculate_sweepstake_scores()
