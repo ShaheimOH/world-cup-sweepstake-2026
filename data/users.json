@@ -1,58 +1,61 @@
-[
-  {
-    "name": "Ryan Satnarine",
-    "winners": "Brazil",
-    "runnersUp": "Spain",
-    "disappointment": "England",
-    "underdogs": "Haiti",
-    "totalScore": 0.0
-  },
-  {
-    "name": "Riccardo",
-    "winners": "Spain",
-    "runnersUp": "Argentina",
-    "disappointment": "Croatia",
-    "underdogs": "Norway",
-    "totalScore": 0.0
-  },
-  {
-    "name": "Kuba",
-    "winners": "Spain",
-    "runnersUp": "Brazil",
-    "disappointment": "France",
-    "underdogs": "Norway",
-    "totalScore": 0.0
-  },
-  {
-    "name": "shim",
-    "winners": "England",
-    "runnersUp": "Spain",
-    "disappointment": "Portugal",
-    "underdogs": "Norway",
-    "totalScore": 0.0
-  },
-  {
-    "name": "Tiarna",
-    "winners": "Spain",
-    "runnersUp": "Argentina",
-    "disappointment": "Portugal",
-    "underdogs": "Ivory Coast",
-    "totalScore": 0.0
-  },
-  {
-    "name": "Paolo",
-    "winners": "England",
-    "runnersUp": "France",
-    "disappointment": "Morocco",
-    "underdogs": "Norway",
-    "totalScore": 0.0
-  },
-  {
-    "name": "Akshit",
-    "winners": "Brazil",
-    "runnersUp": "Spain",
-    "disappointment": "Portugal",
-    "underdogs": "South Korea",
-    "totalScore": 0.0
-  }
-]
+{
+  "updatedAt": "2026-06-12T23:54:03.483051",
+  "leaderboard": [
+    {
+      "name": "Ryan Satnarine",
+      "winners": "Brazil",
+      "runnersUp": "Spain",
+      "disappointment": "England",
+      "underdogs": "Haiti",
+      "totalScore": 0.0
+    },
+    {
+      "name": "Riccardo",
+      "winners": "Spain",
+      "runnersUp": "Argentina",
+      "disappointment": "Croatia",
+      "underdogs": "Norway",
+      "totalScore": 0.0
+    },
+    {
+      "name": "Kuba",
+      "winners": "Spain",
+      "runnersUp": "Brazil",
+      "disappointment": "France",
+      "underdogs": "Norway",
+      "totalScore": 0.0
+    },
+    {
+      "name": "shim",
+      "winners": "England",
+      "runnersUp": "Spain",
+      "disappointment": "Portugal",
+      "underdogs": "Norway",
+      "totalScore": 0.0
+    },
+    {
+      "name": "Tiarna",
+      "winners": "Spain",
+      "runnersUp": "Argentina",
+      "disappointment": "Portugal",
+      "underdogs": "Ivory Coast",
+      "totalScore": 0.0
+    },
+    {
+      "name": "Paolo",
+      "winners": "England",
+      "runnersUp": "France",
+      "disappointment": "Morocco",
+      "underdogs": "Norway",
+      "totalScore": 0.0
+    },
+    {
+      "name": "Akshit",
+      "winners": "Brazil",
+      "runnersUp": "Spain",
+      "disappointment": "Portugal",
+      "underdogs": "South Korea",
+      "totalScore": 0.0
+    }
+  ]
+}
