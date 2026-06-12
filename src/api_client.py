@@ -219,9 +219,11 @@ def sync_players_from_google_sheets():
         print(f"Sheet sync error: {e}")
         return None
 
+from datetime import datetime
+
 def calculate_sweepstake_scores():
+    # 1. Gather all submissions
     players = sync_players_from_google_sheets() or []
-    
     webhook_players = []
     try:
         with open('data/raw_submissions.json', 'r') as file:
@@ -245,6 +247,7 @@ def calculate_sweepstake_scores():
         print("⚠️ No user targets discovered.")
         return
 
+    # 2. Build Maps & Fetch Live Data
     try:
         name_to_id, id_to_name = build_team_id_maps()
         live = fetch_live_tournament_state(id_to_name)
@@ -262,16 +265,13 @@ def calculate_sweepstake_scores():
 
     leaderboard = []
 
+    # 3. Calculate Scores
     for player in unique_players:
         score = 0.0
         w_id = name_to_id.get(clean_string(player.get('winners')), "UNKNOWN_ID")
         r_id = name_to_id.get(clean_string(player.get('runnersUp')), "UNKNOWN_ID")
         d_id = name_to_id.get(clean_string(player.get('disappointment')), "UNKNOWN_ID")
         u_id = name_to_id.get(clean_string(player.get('underdogs')), "UNKNOWN_ID")
-
-        # Fallback tracking printouts for debugging naming mismatches
-        if d_id == "UNKNOWN_ID" and player.get('disappointment'):
-            print(f"🔍 Notice: Unable to resolve ID for pick string: '{player.get('disappointment')}'")
 
         d_standard_name = id_to_name.get(d_id, "Unknown")
         u_standard_name = id_to_name.get(u_id, "Unknown")
@@ -280,7 +280,7 @@ def calculate_sweepstake_scores():
         u_sr = get_scaled_ranking(u_standard_name)
         u_multiplier = (1 - u_sr)
 
-        # --- Winner Selection ---
+        # Winner/Runner-up scoring
         if w_id == actual_winner_id and actual_winner_id != "TBD": score += 6
         elif w_id == actual_runner_id and actual_runner_id != "TBD": score += 4
         elif w_id in actual_semis: score += 3
@@ -288,7 +288,6 @@ def calculate_sweepstake_scores():
         elif w_id in actual_r16: score += 1
         elif w_id in actual_r32: score += 0.5
         
-        # --- Runner-Up Selection ---
         if r_id == actual_runner_id and actual_runner_id != "TBD": score += 6
         elif r_id == actual_winner_id and actual_winner_id != "TBD": score += 4
         elif r_id in actual_semis: score += 3
@@ -296,7 +295,7 @@ def calculate_sweepstake_scores():
         elif r_id in actual_r16: score += 1
         elif r_id in actual_r32: score += 0.5
 
-        # --- Biggest Disappointment ---
+        # Disappointment/Underdog scoring
         if d_id in actual_group_stage_exit: score += 6 * d_sr
         elif d_id in actual_r32 and d_id not in actual_r16: score += 5 * d_sr
         elif d_id in actual_r16 and d_id not in actual_quarters: score += 4 * d_sr
@@ -304,7 +303,6 @@ def calculate_sweepstake_scores():
         elif d_id in actual_semis and d_id != actual_runner_id and d_id != actual_winner_id: score += 2 * d_sr
         elif d_id == actual_runner_id and actual_runner_id != "TBD": score += 1 * d_sr
 
-        # --- Underdogs ---
         if u_id == actual_winner_id and actual_winner_id != "TBD": score += 6 * u_multiplier
         elif u_id == actual_runner_id and actual_runner_id != "TBD": score += 4 * u_multiplier
         elif u_id in actual_semis: score += 3 * u_multiplier
@@ -323,13 +321,19 @@ def calculate_sweepstake_scores():
 
     leaderboard = sorted(leaderboard, key=lambda x: x.get('totalScore', 0), reverse=True)
     
+    # 4. Save with Timestamp (Ensures Git always sees a file change)
+    final_output = {
+        "updatedAt": datetime.utcnow().isoformat(),
+        "leaderboard": leaderboard
+    }
+    
     if not os.path.exists(DATA_DIR):
-            os.makedirs(DATA_DIR)
+        os.makedirs(DATA_DIR)
             
     with open(USERS_FILE, 'w') as file: 
-            json.dump(leaderboard, file, indent=2)
-            
-    print(f"🚀 Success! Processed {len(leaderboard)} sorted users. Saved to {USERS_FILE}")
+        json.dump(final_output, file, indent=2)
+        
+    print(f"🚀 Success! Processed {len(leaderboard)} sorted users at {final_output['updatedAt']}")
 
 if __name__ == "__main__":
     calculate_sweepstake_scores()
