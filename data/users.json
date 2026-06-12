@@ -1,1 +1,50 @@
-[{"name":"Ryan Satnarine","winners":"Brazil","runnersUp":"Spain","disappointment":"England","underdogs":"Haiti"},{"name":"Riccardo","winners":"Spain","runnersUp":"Argentina","disappointment":"Croatia","underdogs":"Norway"},{"name":"Kuba","winners":"Spain","runnersUp":"Brazil","disappointment":"France","underdogs":"Norway"},{"name":"shim","winners":"England","runnersUp":"Spain","disappointment":"Portugal","underdogs":"Norway"},{"name":"Tiarna","winners":"Spain","runnersUp":"Argentina","disappointment":"Portugal","underdogs":"Ivory Coast"},{"name":"Paolo","winners":"England","runnersUp":"France","disappointment":"Morocco","underdogs":"Norway"}]
+[
+  {
+    "name": "Haiti",
+    "winners": "Brazil",
+    "runnersUp": "Spain",
+    "disappointment": "England",
+    "underdogs": "Haiti",
+    "totalScore": 0.0
+  },
+  {
+    "name": "Norway",
+    "winners": "Spain",
+    "runnersUp": "Argentina",
+    "disappointment": "Croatia",
+    "underdogs": "Norway",
+    "totalScore": 0.0
+  },
+  {
+    "name": "Norway",
+    "winners": "Spain",
+    "runnersUp": "Brazil",
+    "disappointment": "France",
+    "underdogs": "Norway",
+    "totalScore": 0.0
+  },
+  {
+    "name": "Norway",
+    "winners": "England",
+    "runnersUp": "Spain",
+    "disappointment": "Portugal",
+    "underdogs": "Norway",
+    "totalScore": 0.0
+  },
+  {
+    "name": "Ivory Coast",
+    "winners": "Spain",
+    "runnersUp": "Argentina",
+    "disappointment": "Portugal",
+    "underdogs": "Ivory Coast",
+    "totalScore": 0.0
+  },
+  {
+    "name": "Norway",
+    "winners": "England",
+    "runnersUp": "France",
+    "disappointment": "Morocco",
+    "underdogs": "Norway",
+    "totalScore": 0.0
+  }
+]
