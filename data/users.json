@@ -1,43 +1,11 @@
 [
   {
-    "name": "Haiti",
-    "winners": "Brazil",
-    "runnersUp": "Spain",
-    "disappointment": "England",
-    "underdogs": "Haiti",
-    "totalScore": 0.0
-  },
-  {
     "name": "Norway",
     "winners": "Spain",
     "runnersUp": "Argentina",
     "disappointment": "Croatia",
     "underdogs": "Norway",
-    "totalScore": 0.0
-  },
-  {
-    "name": "Norway",
-    "winners": "Spain",
-    "runnersUp": "Brazil",
-    "disappointment": "France",
-    "underdogs": "Norway",
-    "totalScore": 0.0
-  },
-  {
-    "name": "Norway",
-    "winners": "England",
-    "runnersUp": "Spain",
-    "disappointment": "Portugal",
-    "underdogs": "Norway",
-    "totalScore": 0.0
-  },
-  {
-    "name": "Ivory Coast",
-    "winners": "Spain",
-    "runnersUp": "Argentina",
-    "disappointment": "Portugal",
-    "underdogs": "Ivory Coast",
-    "totalScore": 0.0
+    "totalScore": 0.78
   },
   {
     "name": "Norway",
@@ -45,6 +13,38 @@
     "runnersUp": "France",
     "disappointment": "Morocco",
     "underdogs": "Norway",
-    "totalScore": 0.0
+    "totalScore": 0.49
+  },
+  {
+    "name": "Norway",
+    "winners": "England",
+    "runnersUp": "Spain",
+    "disappointment": "Portugal",
+    "underdogs": "Norway",
+    "totalScore": 0.35
+  },
+  {
+    "name": "Ivory Coast",
+    "winners": "Spain",
+    "runnersUp": "Argentina",
+    "disappointment": "Portugal",
+    "underdogs": "Ivory Coast",
+    "totalScore": 0.35
+  },
+  {
+    "name": "Haiti",
+    "winners": "Brazil",
+    "runnersUp": "Spain",
+    "disappointment": "England",
+    "underdogs": "Haiti",
+    "totalScore": 0.28
+  },
+  {
+    "name": "Norway",
+    "winners": "Spain",
+    "runnersUp": "Brazil",
+    "disappointment": "France",
+    "underdogs": "Norway",
+    "totalScore": 0.21
   }
 ]

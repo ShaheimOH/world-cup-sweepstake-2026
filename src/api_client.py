@@ -3,6 +3,9 @@ import requests
 import csv
 from io import StringIO
 
+
+API_TOKEN = "df1cb358fc2a451986970e91883e58b1"
+
 # Official Pre-Tournament FIFA World Rankings (June 2026 Update)
 TEAM_RANKINGS = {
     "Mexico": 14, "South Korea": 25, "Czechia": 39, "South Africa": 60,
@@ -21,13 +24,20 @@ TEAM_RANKINGS = {
 
 LOWEST_RANK = max(TEAM_RANKINGS.values()) 
 SPREADSHEET_ID = "1xVHTfh8G-EOJK_jTiz0zqQ2Q0t4ySVvcVNza4gPIAH0"
+HEADERS = { "X-Auth-Token": API_TOKEN }
 
 def get_scaled_ranking(team_name):
     rank = TEAM_RANKINGS.get(team_name, LOWEST_RANK)
     return rank / LOWEST_RANK
 
+def log_rate_limits(response):
+    """Helper to monitor API token safety ceilings inside GitHub Action runlogs"""
+    available = response.headers.get("X-RequestsAvailable", "Unknown")
+    reset_timer = response.headers.get("X-RequestCounter-Reset", "Unknown")
+    print(f"📊 Rate Limits -> Requests Available in Minute Window: {available} | Window Reset: {reset_timer}s")
+
 def build_team_id_maps():
-    """Queries /get/teams to match direct API keys against standardized naming models"""
+    """Queries football-data.org to cross-check Integer IDs against standard ranking text"""
     name_to_id = {}
     id_to_standard_name = {}
     
@@ -37,135 +47,125 @@ def build_team_id_maps():
         "cote d'ivoire": "côte d'ivoire", "bosnia": "bosnia and herzegovina"
     }
     
+    url = "https://api.football-data.org/v4/competitions/WC/teams"
     try:
-        response = requests.get("https://worldcup26.ir/get/teams", timeout=10)
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        log_rate_limits(response)
+        
         if response.status_code == 200:
-            teams_list = response.json()
-            for team in teams_list:
-                if not isinstance(team, dict): 
-                    continue
-                
-                # Dynamic check for string MongoDB hash keys vs numerical team index strings
-                team_id = str(team.get("id") or team.get("team_id") or team.get("_id", ""))
+            data = response.json()
+            for team in data.get("teams", []):
+                team_id = str(team.get("id", ""))
                 api_name = team.get("name", "").strip()
-                if not team_id or not api_name: 
-                    continue
+                short_name = team.get("shortName", api_name).strip()
                 
+                if not team_id: continue
+                
+                # Cross-check name signatures against our pre-defined rankings keys
                 matched_key = None
                 for official_key in TEAM_RANKINGS.keys():
-                    if official_key.lower() == api_name.lower():
+                    if official_key.lower() in [api_name.lower(), short_name.lower()]:
                         matched_key = official_key
                         break
                 
-                if not matched_key:
-                    matched_key = api_name.title()
+                if not matched_key: 
+                    matched_key = short_name.title()
                 
                 id_to_standard_name[team_id] = matched_key
-                name_to_id[matched_key.lower()] = team_id
                 name_to_id[api_name.lower()] = team_id
-            
-            for slang, official_target in synonyms.items():
-                if official_target in name_to_id:
-                    name_to_id[slang] = name_to_id[official_target]
-                    
+                name_to_id[short_name.lower()] = team_id
+                name_to_id[matched_key.lower()] = team_id
+                
     except Exception as e:
-        print(f"⚠️ Critical Error parsing team directory mappings: {e}")
+        print(f"Error building database translation maps: {e}")
         
+    # Layer text slang synonyms into mapping lookup tables
+    for slang, target in synonyms.items():
+        if target in name_to_id: 
+            name_to_id[slang] = name_to_id[target]
+            
     return name_to_id, id_to_standard_name
 
-def fetch_live_tournament_state():
-    """Assembles active standings entirely using direct text key comparisons"""
+def fetch_live_tournament_state(id_to_name):
+    """Pulls live standings snapshots and maps them to structural stages using Integer keys"""
     state = {
         "winner": "TBD", "runner_up": "TBD",
         "semis": set(), "quarters": set(), "r16": set(), "r32": set(), "group_stage_exit": set()
     }
     
-    projected_r32 = set()
-    projected_exits = set()
-    all_api_ids = set()
+    interim_r32 = set()
+    interim_exits = set()
+    all_known_ids = set(id_to_name.keys())
     
-    # 1. Gather Group Projections
+    # 1. Fetch Group Standings for interim calculation fallbacks
+    url_standings = "https://api.football-data.org/v4/competitions/WC/standings"
     try:
-        group_response = requests.get("https://worldcup26.ir/get/groups", timeout=10)
-        if group_response.status_code == 200:
-            groups_data = group_response.json()
-            for group in groups_data:
-                teams = group.get("teams", [])
-                for i, team in enumerate(teams):
-                    # Check if the team element is an object dictionary or a direct raw string ID
-                    if isinstance(team, dict):
-                        t_id = str(team.get("id") or team.get("team_id") or team.get("_id", ""))
-                    else:
-                        t_id = str(team)
-                        
-                    if not t_id: 
-                        continue
-                    all_api_ids.add(t_id)
-                    if i < 2:
-                        projected_r32.add(t_id)
-                    else:
-                        projected_exits.add(t_id)
+        response = requests.get(url_standings, headers=HEADERS, timeout=10)
+        if response.status_code == 200:
+            standings_data = response.json().get("standings", [])
+            for group_block in standings_data:
+                table = group_block.get("table", [])
+                for idx, row in enumerate(table):
+                    t_id = str(row.get("team", {}).get("id", ""))
+                    if not t_id: continue
+                    if idx < 2: 
+                        interim_r32.add(t_id)
+                    else: 
+                        interim_exits.add(t_id)
     except Exception as e:
-        print(f"Group standings fetch skipped: {e}")
+        print(f"Could not parse group standby tables: {e}")
 
-    # 2. Extract Match Stage updates safely bypassing attribute checks
+    # 2. Extract Knockout Progression states from official Match grids
+    url_matches = "https://api.football-data.org/v4/competitions/WC/matches"
     try:
-        response = requests.get("https://worldcup26.ir/get/games", timeout=10)
-        if response.status_code != 200:
-            state["r32"] = projected_r32
-            state["group_stage_exit"] = projected_exits
-            return state
+        response = requests.get(url_matches, headers=HEADERS, timeout=10)
+        if response.status_code == 200:
+            matches = response.json().get("matches", [])
+            has_actual_knockouts = False
             
-        matches = response.json()
-        knockout_attendees = set()
-        has_actual_knockouts = False
-        
-        for match in matches:
-            if not isinstance(match, dict): 
-                continue
-            stage = match.get("stage", "")
-            status = match.get("status", "")
-            
-            # Safe parsing logic: extracts raw ID value directly if the endpoint passed plain strings
-            h_data = match.get("home_team")
-            a_data = match.get("away_team")
-            w_data = match.get("winner_team")
-            
-            home_id = str(h_data.get("id") or h_data.get("_id") if isinstance(h_data, dict) else h_data or "")
-            away_id = str(a_data.get("id") or a_data.get("_id") if isinstance(a_data, dict) else a_data or "")
-            winner_id = str(w_data.get("id") or w_data.get("_id") if isinstance(w_data, dict) else w_data or "")
-            
-            if stage in ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final"]:
-                has_actual_knockouts = True
-                if home_id: knockout_attendees.add(home_id)
-                if away_id: knockout_attendees.add(away_id)
+            for m in matches:
+                stage = m.get("stage", "") # e.g., "ROUND_OF_32", "LAST_16", "QUARTER_FINALS", "FINAL"
+                status = m.get("status", "")
                 
-            if stage == "Round of 32":
-                if home_id: state["r32"].add(home_id)
-                if away_id: state["r32"].add(away_id)
-            elif stage == "Round of 16":
-                if home_id: state["r16"].add(home_id)
-                if away_id: state["r16"].add(away_id)
-            elif stage == "Quarter-finals":
-                if home_id: state["quarters"].add(home_id)
-                if away_id: state["quarters"].add(away_id)
-            elif stage == "Semi-finals":
-                if home_id: state["semis"].add(home_id)
-                if away_id: state["semis"].add(away_id)
-            elif stage == "Final" and status == "finished" and winner_id:
-                state["winner"] = winner_id
-                state["runner_up"] = away_id if winner_id == home_id else home_id
+                home_id = str(m.get("homeTeam", {}).get("id", "") or "")
+                away_id = str(m.get("awayTeam", {}).get("id", "") or "")
+                winner_assignment = str(m.get("score", {}).get("winner", ""))
+                
+                true_winner_id = ""
+                if status == "FINISHED":
+                    if winner_assignment == "HOME_TEAM": true_winner_id = home_id
+                    elif winner_assignment == "AWAY_TEAM": true_winner_id = away_id
+                
+                if stage != "GROUP_STAGE":
+                    has_actual_knockouts = True
+                    
+                if stage == "ROUND_OF_32":
+                    if home_id: state["r32"].add(home_id)
+                    if away_id: state["r32"].add(away_id)
+                elif stage in ["LAST_16", "ROUND_OF_16"]:
+                    if home_id: state["r16"].add(home_id)
+                    if away_id: state["r16"].add(away_id)
+                elif stage == "QUARTER_FINALS":
+                    if home_id: state["quarters"].add(home_id)
+                    if away_id: state["quarters"].add(away_id)
+                elif stage == "SEMI_FINALS":
+                    if home_id: state["semis"].add(home_id)
+                    if away_id: state["semis"].add(away_id)
+                elif stage == "FINAL":
+                    if status == "FINISHED" and true_winner_id:
+                        state["winner"] = true_winner_id
+                        state["runner_up"] = away_id if true_winner_id == home_id else home_id
 
-        if has_actual_knockouts:
-            state["group_stage_exit"] = all_api_ids - knockout_attendees
-        else:
-            state["r32"] = projected_r32
-            state["group_stage_exit"] = projected_exits
-            
+            if has_actual_knockouts:
+                knockout_attendees = state["r32"] | state["r16"] | state["quarters"] | state["semis"]
+                state["group_stage_exit"] = all_known_ids - knockout_attendees
+            else:
+                state["r32"] = interim_r32 if interim_r32 else all_known_ids
+                state["group_stage_exit"] = interim_exits
     except Exception as e:
-        print(f"API Match calculation matrix bypassed: {e}")
-        state["r32"] = projected_r32
-        state["group_stage_exit"] = projected_exits
+        print(f"Matches processor encountered warning fallback: {e}")
+        state["r32"] = interim_r32
+        state["group_stage_exit"] = interim_exits
         
     return state
 
@@ -210,20 +210,17 @@ def sync_players_from_google_sheets():
 
 def calculate_sweepstake_scores():
     sync_players_from_google_sheets()
-    
     try:
-        with open('data/users.json', 'r') as file:
+        with open('data/users.json', 'r') as file: 
             players = json.load(file)
     except:
-        print("No users found to parse.")
         return
 
     name_to_id, id_to_name = build_team_id_maps()
-    live = fetch_live_tournament_state()
+    live = fetch_live_tournament_state(id_to_name)
 
     actual_winner_id = live["winner"]
     actual_runner_id = live["runner_up"]
-    
     actual_semis = live["semis"]
     actual_quarters = live["quarters"]
     actual_r16 = live["r16"]
@@ -235,6 +232,7 @@ def calculate_sweepstake_scores():
     for player in players:
         score = 0.0
         
+        # Translate form entries to their clean football-data IDs
         w_id = name_to_id.get(player.get('winners', '').strip().lower(), "UNKNOWN_ID")
         r_id = name_to_id.get(player.get('runnersUp', '').strip().lower(), "UNKNOWN_ID")
         d_id = name_to_id.get(player.get('disappointment', '').strip().lower(), "UNKNOWN_ID")
@@ -289,11 +287,9 @@ def calculate_sweepstake_scores():
         })
 
     leaderboard = sorted(leaderboard, key=lambda x: x.get('totalScore', 0), reverse=True)
-
-    with open('data/users.json', 'w') as file:
+    with open('data/users.json', 'w') as file: 
         json.dump(leaderboard, file, indent=2)
-        
-    print(f"🚀 Fixed ID Engine Sync Successful! Processed {len(leaderboard)} users smoothly.")
+    print(f"Score calculation complete for {len(leaderboard)} users using football-data.org IDs!")
 
 if __name__ == "__main__":
     calculate_sweepstake_scores()
