@@ -180,13 +180,22 @@ def sync_players_from_google_sheets():
         
         updated_players = []
         headers = [h.strip().lower() for h in reader[0]]
+        
+        # STRICT FIXED COLUMN MAPPINGS TO PREVENT OVERWRITING NAMES
         name_idx, winner_idx, runner_idx, disapp_idx, underdog_idx = 1, 2, 3, 4, 5
+        
         for i, h in enumerate(headers):
-            if "name" in h or "username" in h: name_idx = i
-            elif "winner" in h: winner_idx = i
-            elif "runner" in h: runner_idx = i
-            elif "disappointment" in h: disapp_idx = i
-            elif "underdog" in h: underdog_idx = i
+            # Check for exact matches or explicit user name headers to avoid colliding with country selections
+            if h in ["name", "player name", "your name", "username"]: 
+                name_idx = i
+            elif "winner" in h and "runner" not in h: 
+                winner_idx = i
+            elif "runner" in h: 
+                runner_idx = i
+            elif "disappointment" in h: 
+                disapp_idx = i
+            elif "underdog" in h: 
+                underdog_idx = i
 
         for row in reader[1:]:
             if not row or all(cell.strip() == "" for cell in row): continue
@@ -205,9 +214,10 @@ def sync_players_from_google_sheets():
         with open('data/users.json', 'w') as file:
             json.dump(updated_players, file, indent=2)
         return True
-    except:
+    except Exception as e:
+        print(f"Sheet sync error: {e}")
         return False
-
+    
 def calculate_sweepstake_scores():
     sync_players_from_google_sheets()
     try:
