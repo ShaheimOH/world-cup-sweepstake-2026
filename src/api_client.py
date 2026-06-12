@@ -6,6 +6,9 @@ from io import StringIO
 
 # 🔑 SECURE: Looks for the GitHub Secret token first, falls back to your token for local testing
 API_TOKEN = os.environ.get("FOOTBALL_DATA_TOKEN", "df1cb358fc2a451986970e91883e58b1")
+# Ensure the 'data' directory exists locally to avoid FileNotFoundError
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+USERS_FILE = os.path.join(DATA_DIR, 'users.json')
 
 # Official Pre-Tournament FIFA World Rankings (June 2026 Update)
 TEAM_RANKINGS = {
@@ -320,10 +323,13 @@ def calculate_sweepstake_scores():
 
     leaderboard = sorted(leaderboard, key=lambda x: x.get('totalScore', 0), reverse=True)
     
-    with open('data/users.json', 'w') as file: 
-        json.dump(leaderboard, file, indent=2)
-        
-    print(f"🚀 Success! Processed and recorded {len(leaderboard)} sorted users.")
+    if not os.path.exists(DATA_DIR):
+            os.makedirs(DATA_DIR)
+            
+    with open(USERS_FILE, 'w') as file: 
+            json.dump(leaderboard, file, indent=2)
+            
+    print(f"🚀 Success! Processed {len(leaderboard)} sorted users. Saved to {USERS_FILE}")
 
 if __name__ == "__main__":
     calculate_sweepstake_scores()
