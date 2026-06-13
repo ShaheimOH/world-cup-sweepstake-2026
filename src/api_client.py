@@ -5,7 +5,7 @@ import csv
 from io import StringIO
 
 # 🔑 SECURE: Looks for the GitHub Secret token first, falls back to your token for local testing
-API_TOKEN = os.environ.get("FOOTBALL_DATA_TOKEN", "df1cb358fc2a451986970e91883e58b1")
+API_TOKEN = os.environ.get("FOOTBALL_DATA_TOKEN")
 # Ensure the 'data' directory exists locally to avoid FileNotFoundError
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 USERS_FILE = os.path.join(DATA_DIR, 'users.json')
