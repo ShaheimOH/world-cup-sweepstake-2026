@@ -8,19 +8,21 @@ jobs:
   update-users:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Explicitly forces write access for this job
+      contents: write
+
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      - name: Overwrite users data store
+      - name: Save raw form submissions
         run: |
-          echo '${{ github.event.client_payload.users_data }}' > data/users.json
+          mkdir -p data
+          echo '${{ github.event.client_payload.users_data }}' > data/raw_submissions.json
 
-      - name: Commit data change back to repository
+      - name: Commit raw submission data
         run: |
           git config --global user.name 'Sweepstake Data Engine'
           git config --global user.email 'engine@github.com'
-          git add data/users.json
+          git add data/raw_submissions.json
           git commit -m "Automated Sync: New sweepstake player registered" || echo "No changes to sync"
           git push
