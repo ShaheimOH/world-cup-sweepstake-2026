@@ -1,6 +1,5 @@
 import os
 import sys
-import requests
 import json
 
 # Ensure parent directory is visible
@@ -13,6 +12,11 @@ from src.api_client import (
     fetch_live_tournament_state, sync_players_from_google_sheets
 )
 
+def format_4sf(value):
+    """Formats a float to 4 significant figures."""
+    if value == 0: return "0.000"
+    return f"{float(value):.4g}"
+
 def diagnostic_score_calculator():
     print("=======================================================")
     print("   🏆 SWEEPSTAKE LIVE POINT CALCULATION DIAGNOSTIC 🏆  ")
@@ -24,132 +28,82 @@ def diagnostic_score_calculator():
         name_to_id, id_to_name = build_team_id_maps()
         live = fetch_live_tournament_state(id_to_name)
     except Exception as e:
-        print(f"❌ Failed to reach API or parse matrix: {e}")
+        print(f"❌ Failed to reach API: {e}")
         return
 
-    # Extract live pools
-    actual_winner = live["winner"]
-    actual_runner = live["runner_up"]
-    actual_semis = live["semis"]
-    actual_quarters = live["quarters"]
-    actual_r16 = live["r16"]
-    actual_r32 = live["r32"]
-    actual_exits = live["group_stage_exit"]
-
     # 2. Fetch User Entries
-    print("\n2. Fetching User Submissions...")
-    players = sync_players_from_google_sheets() or []
+    all_entries = sync_players_from_google_sheets() or []
     
-    webhook_players = []
-    try:
-        with open('data/raw_submissions.json', 'r') as file:
-            webhook_players = json.load(file)
-            if not isinstance(webhook_players, list):
-                webhook_players = [webhook_players]
-    except:
-        pass
-
-    all_entries = players + webhook_players
-    seen_names = set()
+    # Process unique players exactly like in api_client
     unique_players = []
-    
+    seen_names = set()
     for p in all_entries:
         name = p.get('name', '').strip()
         if name and name not in seen_names:
             seen_names.add(name)
             unique_players.append(p)
 
-    print(f"   Found {len(unique_players)} unique participant(s) to calculate.\n")
-    print("=" * 70)
+    print(f"   Calculated {len(unique_players)} participant(s).\n")
 
-    # 3. Process each player with explicit terminal breakdown
+    # 3. Process each player
     for player in unique_players:
-        p_name = player.get('name')
-        p_winner = player.get('winners')
-        p_runner = player.get('runnersUp')
-        p_disapp = player.get('disappointment')
-        p_underdog = player.get('underdogs')
+        score = 0.0
+        w_id = name_to_id.get(clean_string(player.get('winners')), "UNKNOWN_ID")
+        r_id = name_to_id.get(clean_string(player.get('runnersUp')), "UNKNOWN_ID")
+        d_id = name_to_id.get(clean_string(player.get('disappointment')), "UNKNOWN_ID")
+        u_id = name_to_id.get(clean_string(player.get('underdogs')), "UNKNOWN_ID")
 
-        print(f"\n👤 PLAYER: {p_name.upper()}")
-        print("-" * 40)
+        d_standard_name = id_to_name.get(d_id, "Unknown")
+        u_standard_name = id_to_name.get(u_id, "Unknown")
 
-        # Resolve IDs
-        w_id = name_to_id.get(clean_string(p_winner), "UNKNOWN")
-        r_id = name_to_id.get(clean_string(p_runner), "UNKNOWN")
-        d_id = name_to_id.get(clean_string(p_disapp), "UNKNOWN")
-        u_id = name_to_id.get(clean_string(p_underdog), "UNKNOWN")
+        d_sr = get_scaled_ranking(d_standard_name)
+        u_sr = get_scaled_ranking(u_standard_name)
+        u_mult = (1 - u_sr)
 
-        total_score = 0.0
-
-        # --- Winner Calculation ---
+        print(f"\n👤 PLAYER: {player.get('name')}")
+        
+        # Winner Logic
         w_pts = 0.0
-        if w_id != "UNKNOWN":
-            if w_id == actual_winner and actual_winner != "TBD": w_pts = 6.0
-            elif w_id == actual_runner and actual_runner != "TBD": w_pts = 4.0
-            elif w_id in actual_semis: w_pts = 3.0
-            elif w_id in actual_quarters: w_pts = 2.0
-            elif w_id in actual_r16: w_pts = 1.0
-            elif w_id in actual_r32: w_pts = 0.5
-        total_score += w_pts
-        print(f"  ↳ Winner Pick: [{p_winner:<15}] -> Map Status: {'OK' if w_id != 'UNKNOWN' else '❌ UNKNOWN'} | Points: {w_pts}")
+        if w_id == live["winner"] and live["winner"] != "TBD": w_pts = 6.0
+        elif w_id == live["runner_up"] and live["runner_up"] != "TBD": w_pts = 4.0
+        elif w_id in live["semis"]: w_pts = 3.0
+        elif w_id in live["quarters"]: w_pts = 2.0
+        elif w_id in live["r16"]: w_pts = 1.0
+        elif w_id in live["r32"]: w_pts = 0.5
+        score += w_pts
 
-        # --- Runner-Up Calculation ---
+        # Runner-Up Logic
         r_pts = 0.0
-        if r_id != "UNKNOWN":
-            if r_id == actual_runner and actual_runner != "TBD": r_pts = 6.0
-            elif r_id == actual_winner and actual_winner != "TBD": r_pts = 4.0
-            elif r_id in actual_semis: r_pts = 3.0
-            elif r_id in actual_quarters: r_pts = 2.0
-            elif r_id in actual_r16: r_pts = 1.0
-            elif r_id in actual_r32: r_pts = 0.5
-        total_score += r_pts
-        print(f"  ↳ Runner Pick: [{p_runner:<15}] -> Map Status: {'OK' if r_id != 'UNKNOWN' else '❌ UNKNOWN'} | Points: {r_pts}")
+        if r_id == live["runner_up"] and live["runner_up"] != "TBD": r_pts = 6.0
+        elif r_id == live["winner"] and live["winner"] != "TBD": r_pts = 4.0
+        elif r_id in live["semis"]: r_pts = 3.0
+        elif r_id in live["quarters"]: r_pts = 2.0
+        elif r_id in live["r16"]: r_pts = 1.0
+        elif r_id in live["r32"]: r_pts = 0.5
+        score += r_pts
 
-        # --- Disappointment Calculation ---
+        # Disappointment Logic
         d_pts = 0.0
-        if d_id != "UNKNOWN":
-            d_name = id_to_name.get(d_id, "Unknown")
-            d_sr = get_scaled_ranking(d_name)
-            
-            if d_id in actual_exits: base = 6
-            elif d_id in actual_r32 and d_id not in actual_r16: base = 5
-            elif d_id in actual_r16 and d_id not in actual_quarters: base = 4
-            elif d_id in actual_quarters and d_id not in actual_semis: base = 3
-            elif d_id in actual_semis and d_id != actual_runner and d_id != actual_winner: base = 2
-            elif d_id == actual_runner and actual_runner != "TBD": base = 1
-            else: base = 0
-            
-            d_pts = round(base * d_sr, 2)
-            print(f"  ↳ Disapp Pick: [{p_disapp:<15}] -> Weight multiplier (Rank {TEAM_RANKINGS.get(d_name, 73)}/73): {d_sr:.2f} | Points: {d_pts}")
-        else:
-            print(f"  ↳ Disapp Pick: [{p_disapp:<15}] -> Map Status: ❌ UNKNOWN | Points: 0.0")
+        if d_id in live["group_stage_exit"]: d_pts = 6 * d_sr
+        elif d_id in live["r32"] and d_id not in live["r16"]: d_pts = 5 * d_sr
+        elif d_id in live["r16"] and d_id not in live["quarters"]: d_pts = 4 * d_sr
+        elif d_id in live["quarters"] and d_id not in live["semis"]: d_pts = 3 * d_sr
+        elif d_id in live["semis"] and d_id != live["runner_up"] and d_id != live["winner"]: d_pts = 2 * d_sr
+        elif d_id == live["runner_up"] and live["runner_up"] != "TBD": d_pts = 1 * d_sr
+        score += d_pts
 
-        # --- Underdog Calculation ---
+        # Underdog Logic
         u_pts = 0.0
-        if u_id != "UNKNOWN":
-            u_name = id_to_name.get(u_id, "Unknown")
-            u_sr = get_scaled_ranking(u_name)
-            u_mult = round(1 - u_sr, 2)
-            
-            if u_id == actual_winner and actual_winner != "TBD": base = 6
-            elif u_id == actual_runner and actual_runner != "TBD": base = 4
-            elif u_id in actual_semis: base = 3
-            elif u_id in actual_quarters: base = 2
-            elif u_id in actual_r16: base = 1
-            elif u_id in actual_r32: base = 0.5
-            else: base = 0
-            
-            u_pts = round(base * u_mult, 2)
-            print(f"  ↳ Underdg Pick: [{p_underdog:<15}] -> Weight multiplier (Rank {TEAM_RANKINGS.get(u_name, 73)}/73): {u_mult:.2f} | Points: {u_pts}")
-        else:
-            print(f"  ↳ Underdg Pick: [{p_underdog:<15}] -> Map Status: ❌ UNKNOWN | Points: 0.0")
+        if u_id == live["winner"] and live["winner"] != "TBD": u_pts = 6 * u_mult
+        elif u_id == live["runner_up"] and live["runner_up"] != "TBD": u_pts = 4 * u_mult
+        elif u_id in live["semis"]: u_pts = 3 * u_mult
+        elif u_id in live["quarters"]: u_pts = 2 * u_mult
+        elif u_id in live["r16"]: u_pts = 1 * u_mult
+        elif u_id in live["r32"]: u_pts = 0.5 * u_mult
+        score += u_pts
 
-        print(f"  ⭐ TOTAL CALCULATED SCORE: {round(total_score, 2)}")
-        print("-" * 40)
-
-    print("\n=======================================================")
-    print("             DIAGNOSTIC RUN COMPLETED                  ")
-    print("=======================================================")
+        print(f"  ↳ Winner ({w_pts}) + Runner ({r_pts}) + Disapp ({format_4sf(d_pts)}) + Underdog ({format_4sf(u_pts)})")
+        print(f"  ⭐ TOTAL: {format_4sf(score)}")
 
 if __name__ == "__main__":
     diagnostic_score_calculator()
