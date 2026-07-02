@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-02T05:03:17.334622",
+  "updatedAt": "2026-07-02T09:24:35.847479",
   "leaderboard": [
     {
       "name": "Paolo",
@@ -7,7 +7,15 @@
       "runnersUp": "France",
       "disappointment": "Morocco",
       "underdogs": "Norway",
-      "totalScore": 1.96
+      "totalScore": 2.96
+    },
+    {
+      "name": "shim",
+      "winners": "England",
+      "runnersUp": "Spain",
+      "disappointment": "Portugal",
+      "underdogs": "Norway",
+      "totalScore": 1.99
     },
     {
       "name": "Kuba",
@@ -39,15 +47,7 @@
       "runnersUp": "Spain",
       "disappointment": "England",
       "underdogs": "Haiti",
-      "totalScore": 1.28
-    },
-    {
-      "name": "shim",
-      "winners": "England",
-      "runnersUp": "Spain",
-      "disappointment": "Portugal",
-      "underdogs": "Norway",
-      "totalScore": 0.99
+      "totalScore": 1.19
     },
     {
       "name": "Tiarna",
