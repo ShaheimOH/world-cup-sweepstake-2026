@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-07T04:58:25.747719",
+  "updatedAt": "2026-07-07T08:33:26.821712",
   "leaderboard": [
     {
       "name": "Paolo",
@@ -15,7 +15,7 @@
       "runnersUp": "Spain",
       "disappointment": "Portugal",
       "underdogs": "Norway",
-      "totalScore": 4.51
+      "totalScore": 5.51
     },
     {
       "name": "Riccardo",
@@ -23,7 +23,7 @@
       "runnersUp": "Argentina",
       "disappointment": "Croatia",
       "underdogs": "Norway",
-      "totalScore": 4.05
+      "totalScore": 5.05
     },
     {
       "name": "Kuba",
@@ -31,7 +31,7 @@
       "runnersUp": "Brazil",
       "disappointment": "France",
       "underdogs": "Norway",
-      "totalScore": 3.38
+      "totalScore": 4.38
     },
     {
       "name": "Tiarna",
@@ -39,7 +39,7 @@
       "runnersUp": "Argentina",
       "disappointment": "Portugal",
       "underdogs": "Ivory Coast",
-      "totalScore": 2.24
+      "totalScore": 3.24
     },
     {
       "name": "Akshit",
@@ -47,7 +47,7 @@
       "runnersUp": "Spain",
       "disappointment": "Portugal",
       "underdogs": "South Korea",
-      "totalScore": 2.24
+      "totalScore": 3.24
     },
     {
       "name": "Ryan Satnarine",
@@ -55,7 +55,7 @@
       "runnersUp": "Spain",
       "disappointment": "England",
       "underdogs": "Haiti",
-      "totalScore": 2.14
+      "totalScore": 3.14
     }
   ]
 }
