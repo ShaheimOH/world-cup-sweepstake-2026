@@ -1,6 +1,14 @@
 {
-  "updatedAt": "2026-07-08T04:19:35.504905",
+  "updatedAt": "2026-07-08T07:34:01.759287",
   "leaderboard": [
+    {
+      "name": "Riccardo",
+      "winners": "Spain",
+      "runnersUp": "Argentina",
+      "disappointment": "Croatia",
+      "underdogs": "Norway",
+      "totalScore": 6.05
+    },
     {
       "name": "Paolo",
       "winners": "England",
@@ -18,14 +26,6 @@
       "totalScore": 5.51
     },
     {
-      "name": "Riccardo",
-      "winners": "Spain",
-      "runnersUp": "Argentina",
-      "disappointment": "Croatia",
-      "underdogs": "Norway",
-      "totalScore": 5.05
-    },
-    {
       "name": "Kuba",
       "winners": "Spain",
       "runnersUp": "Brazil",
@@ -39,7 +39,7 @@
       "runnersUp": "Argentina",
       "disappointment": "Portugal",
       "underdogs": "Ivory Coast",
-      "totalScore": 3.24
+      "totalScore": 4.24
     },
     {
       "name": "Akshit",
