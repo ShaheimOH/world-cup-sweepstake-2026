@@ -1,6 +1,14 @@
 {
-  "updatedAt": "2026-07-11T03:21:25.269587",
+  "updatedAt": "2026-07-11T06:20:01.845253",
   "leaderboard": [
+    {
+      "name": "Riccardo",
+      "winners": "Spain",
+      "runnersUp": "Argentina",
+      "disappointment": "Croatia",
+      "underdogs": "Norway",
+      "totalScore": 7.05
+    },
     {
       "name": "Paolo",
       "winners": "England",
@@ -10,20 +18,12 @@
       "totalScore": 6.52
     },
     {
-      "name": "Riccardo",
-      "winners": "Spain",
-      "runnersUp": "Argentina",
-      "disappointment": "Croatia",
-      "underdogs": "Norway",
-      "totalScore": 6.05
-    },
-    {
       "name": "shim",
       "winners": "England",
       "runnersUp": "Spain",
       "disappointment": "Portugal",
       "underdogs": "Norway",
-      "totalScore": 5.51
+      "totalScore": 6.51
     },
     {
       "name": "Kuba",
@@ -31,7 +31,7 @@
       "runnersUp": "Brazil",
       "disappointment": "France",
       "underdogs": "Norway",
-      "totalScore": 4.34
+      "totalScore": 5.34
     },
     {
       "name": "Tiarna",
@@ -39,7 +39,7 @@
       "runnersUp": "Argentina",
       "disappointment": "Portugal",
       "underdogs": "Ivory Coast",
-      "totalScore": 4.24
+      "totalScore": 5.24
     },
     {
       "name": "Akshit",
@@ -47,7 +47,7 @@
       "runnersUp": "Spain",
       "disappointment": "Portugal",
       "underdogs": "South Korea",
-      "totalScore": 3.24
+      "totalScore": 4.24
     },
     {
       "name": "Ryan Satnarine",
@@ -55,7 +55,7 @@
       "runnersUp": "Spain",
       "disappointment": "England",
       "underdogs": "Haiti",
-      "totalScore": 3.14
+      "totalScore": 4.14
     }
   ]
 }
