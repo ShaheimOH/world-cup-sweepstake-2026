@@ -1,29 +1,21 @@
 {
-  "updatedAt": "2026-08-21T20:31:40.842973",
+  "updatedAt": "2026-08-21T21:30:13.930490",
   "leaderboard": [
+    {
+      "name": "Ryan Satnarine",
+      "winners": "Brazil",
+      "runnersUp": "Spain",
+      "disappointment": "England",
+      "underdogs": "Haiti",
+      "totalScore": 0.0
+    },
     {
       "name": "Riccardo",
       "winners": "Spain",
       "runnersUp": "Argentina",
       "disappointment": "Croatia",
       "underdogs": "Norway",
-      "totalScore": 14.05
-    },
-    {
-      "name": "Tiarna",
-      "winners": "Spain",
-      "runnersUp": "Argentina",
-      "disappointment": "Portugal",
-      "underdogs": "Ivory Coast",
-      "totalScore": 12.24
-    },
-    {
-      "name": "shim",
-      "winners": "England",
-      "runnersUp": "Spain",
-      "disappointment": "Portugal",
-      "underdogs": "Norway",
-      "totalScore": 8.51
+      "totalScore": 0.0
     },
     {
       "name": "Kuba",
@@ -31,7 +23,23 @@
       "runnersUp": "Brazil",
       "disappointment": "France",
       "underdogs": "Norway",
-      "totalScore": 8.34
+      "totalScore": 0.0
+    },
+    {
+      "name": "shim",
+      "winners": "England",
+      "runnersUp": "Spain",
+      "disappointment": "Portugal",
+      "underdogs": "Norway",
+      "totalScore": 0.0
+    },
+    {
+      "name": "Tiarna",
+      "winners": "Spain",
+      "runnersUp": "Argentina",
+      "disappointment": "Portugal",
+      "underdogs": "Ivory Coast",
+      "totalScore": 0.0
     },
     {
       "name": "Paolo",
@@ -39,7 +47,7 @@
       "runnersUp": "France",
       "disappointment": "Morocco",
       "underdogs": "Norway",
-      "totalScore": 7.52
+      "totalScore": 0.0
     },
     {
       "name": "Akshit",
@@ -47,15 +55,7 @@
       "runnersUp": "Spain",
       "disappointment": "Portugal",
       "underdogs": "South Korea",
-      "totalScore": 5.24
-    },
-    {
-      "name": "Ryan Satnarine",
-      "winners": "Brazil",
-      "runnersUp": "Spain",
-      "disappointment": "England",
-      "underdogs": "Haiti",
-      "totalScore": 5.09
+      "totalScore": 0.0
     }
   ]
 }
